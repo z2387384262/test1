@@ -282,6 +282,74 @@ static int retrieve_integer_value(pid_t target_id, unsigned long data_offset, in
 }
 
 /**
+ * @brief 将数据段写入目标进程的指定地址
+ *
+ * @param target_id 目标进程ID
+ * @param data_offset 要写入的内存地址
+ * @param data_to_write 指向要写入数据的缓冲区
+ * @param size 要写入的数据大小 (字节)
+ * @return int 0 表示成功, 负值表示错误码
+ */
+static int write_remote_data_segment(pid_t target_id, unsigned long data_offset, void *data_to_write, size_t size) {
+    struct task_struct *target_process_info = NULL;
+    struct pid *pid_struct = NULL;
+    int ret_val = 0;
+
+    pid_struct = find_get_pid(target_id);
+    if (!pid_struct) {
+        printk(KERN_WARNING "write_remote_data_segment: PID struct for TargetID %d not found.\n", target_id);
+        return -ESRCH;
+    }
+
+    rcu_read_lock();
+    target_process_info = pid_task(pid_struct, PIDTYPE_PID);
+    if (target_process_info) {
+        get_task_struct(target_process_info);
+    }
+    rcu_read_unlock();
+
+    if (!target_process_info) {
+        printk(KERN_WARNING "write_remote_data_segment: Task for TargetID %d not found.\n", target_id);
+        put_pid(pid_struct);
+        return -ESRCH;
+    }
+
+    if (!target_process_info->mm) {
+        printk(KERN_WARNING "write_remote_data_segment: Target process (ID: %d) has no mm_struct.\n", target_id);
+        put_task_struct(target_process_info);
+        put_pid(pid_struct);
+        return -EINVAL;
+    }
+
+    // The '1' in the last argument of access_process_vm means 'write' (vs '0' for read)
+    ret_val = access_process_vm(target_process_info, data_offset, data_to_write, size, 1);
+
+    put_task_struct(target_process_info);
+    put_pid(pid_struct);
+
+    if (ret_val == size) {
+        // printk(KERN_INFO "write_remote_data_segment: Successfully wrote %ld bytes to TargetID %d at 0x%lx.\n", (long)ret_val, target_id, data_offset);
+        return 0; // Success
+    } else if (ret_val >= 0 && ret_val < size) {
+        printk(KERN_WARNING "write_remote_data_segment: Partial write (%d of %zu bytes) to TargetID %d at 0x%lx.\n", ret_val, size, target_id, data_offset);
+        return -EFAULT;
+    } else {
+        printk(KERN_WARNING "write_remote_data_segment: access_process_vm write failed for TargetID %d at 0x%lx. Error: %d\n", target_id, data_offset, ret_val);
+        return ret_val;
+    }
+}
+
+static int write_integer_to_address(pid_t target_id, unsigned long data_offset, int value_to_write) {
+    // printk(KERN_INFO "write_integer_to_address: TargetID: %d, Offset: 0x%lx, Value: %d\n", target_id, data_offset, value_to_write);
+    return write_remote_data_segment(target_id, data_offset, &value_to_write, sizeof(int));
+}
+
+static int write_pointer_to_address(pid_t target_id, unsigned long data_offset, unsigned long value_to_write) {
+    // printk(KERN_INFO "write_pointer_to_address: TargetID: %d, Offset: 0x%lx, Value: 0x%lx\n", target_id, data_offset, value_to_write);
+    return write_remote_data_segment(target_id, data_offset, &value_to_write, sizeof(unsigned long));
+}
+
+/**
  * @brief IPC通道消息接收回调函数 (原 Netlink消息接收回调函数)
  *
  * @param skb 套接字缓冲区，包含接收到的IPC消息
@@ -393,6 +461,21 @@ static int bg_task_loop(void *data) {
                     } else {
                         down_payload.value = 0;
                     }
+                    break;
+                }
+                // ADD THESE NEW CASES:
+                case REQ_TYPE_WRITE_INT: {
+                    down_payload.error_code = write_integer_to_address(current_op->received_data.target_id,
+                                                                     current_op->received_data.data_offset,
+                                                                     (int)current_op->received_data.value_to_write);
+                    down_payload.value = 0;
+                    break;
+                }
+                case REQ_TYPE_WRITE_PTR: {
+                    down_payload.error_code = write_pointer_to_address(current_op->received_data.target_id,
+                                                                       current_op->received_data.data_offset,
+                                                                       current_op->received_data.value_to_write);
+                    down_payload.value = 0;
                     break;
                 }
                 default:

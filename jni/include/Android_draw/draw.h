@@ -27,6 +27,7 @@
 #include "imgui_impl_android.h"
 #include "TouchHelperA.h"//触摸
 #include "timer.h"
+#include "../../src/Android_draw/c_driver.h" // Added for c_driver functionalities
 
 // namespace
 using namespace std;

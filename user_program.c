@@ -307,6 +307,118 @@ int main(int argc, char *argv[]) {
     }
     printf("获取到区域 '%s' 基地址: 0x%lx\n", region_to_find, core_region_base);
 
+    // --- 新增 读取第一个实体血量和坐标的测试代码 (基于 DrawPlayer.hpp 分析) ---
+    printf("\n--- 开始读取特定游戏数据 (基于 DrawPlayer.hpp 分析的偏移) ---\n");
+
+    // 确保我们有有效的基地址和PID才继续
+    // (core_region_base在此之前已经被检查是否为0, target_process_handle 在程序开始时已检查)
+    if (core_region_base != 0) {
+        // 步骤 1: 从 libGameCore.so 基地址 + 0x2540 获取 temp1_val (实体相关的某个基础指针)
+        // DrawPlayer.hpp 参考: long temp1 = ReadValue(libGame_base + 0x2540);
+        uintptr_t temp1_addr = core_region_base + 0x2540;
+        printf("中文注释: 计算 temp1_addr (core_region_base + 0x2540) = 0x%lx\n", temp1_addr);
+        uintptr_t temp1_val = fetch_remote_pointer(target_process_handle, temp1_addr);
+
+        if (temp1_val == 0) {
+            fprintf(stderr, "中文注释: 错误 - 读取 temp1_val 失败 (地址: 0x%lx)\n", temp1_addr);
+        } else {
+            printf("中文注释: 成功 - 读取 temp1_val = 0x%lx\n", temp1_val);
+
+            // 步骤 2: 从 temp1_val + 0x120 获取实体列表相关的指针 (entity_list_struct_addr)
+            // DrawPlayer.hpp 参考: long bingxiang1 = temp1 + 0x120;
+            uintptr_t entity_list_struct_addr = temp1_val + 0x120;
+            printf("中文注释: 计算 entity_list_struct_addr (temp1_val + 0x120) = 0x%lx\n", entity_list_struct_addr);
+
+            // 步骤 3: 获取第一个实体结构体的基址 (entity_base_addr)
+            // DrawPlayer.hpp 逻辑: bingxiang6 = ReadValue(ReadValue(bingxiang1 + i * 0x18) + 0x68);
+            // 我们取 i=0 (第一个实体)
+            uintptr_t first_entity_ptr_location = entity_list_struct_addr; // For i=0, offset from bingxiang1 is +0
+            printf("中文注释: 第一个实体在列表中的指针存储位置 (entity_list_struct_addr) = 0x%lx\n", first_entity_ptr_location);
+            // Dereference 1: ReadValue(bingxiang1 + i*0x18)
+            uintptr_t first_entity_ptr_value = fetch_remote_pointer(target_process_handle, first_entity_ptr_location);
+
+            if (first_entity_ptr_value == 0) {
+                fprintf(stderr, "中文注释: 错误 - 读取第一个实体的指针值失败 (指针存储地址: 0x%lx)\n", first_entity_ptr_location);
+            } else {
+                printf("中文注释: 成功 - 读取到第一个实体的指针值 first_entity_ptr_value = 0x%lx\n", first_entity_ptr_value);
+
+                uintptr_t entity_base_addr_location = first_entity_ptr_value + 0x68; // (Value from previous step) + 0x68
+                printf("中文注释: 计算实体基址的存储位置 (first_entity_ptr_value + 0x68) = 0x%lx\n", entity_base_addr_location);
+                // Dereference 2: ReadValue( ... + 0x68)
+                uintptr_t entity_base_addr = fetch_remote_pointer(target_process_handle, entity_base_addr_location);
+
+                if (entity_base_addr == 0) {
+                    fprintf(stderr, "中文注释: 错误 - 读取实体基址 entity_base_addr 失败 (指针存储地址: 0x%lx)\n", entity_base_addr_location);
+                } else {
+                    printf("中文注释: 成功 - 读取到实体基址 entity_base_addr = 0x%lx\n", entity_base_addr);
+
+                    // 步骤 4: 读取实体血量
+                    // DrawPlayer.hpp: Hp = driver->read<int>(ReadValue(bingxiang6 + 0x168) + 0x98);
+                    uintptr_t health_struct_ptr_location = entity_base_addr + 0x168;
+                    printf("中文注释: 计算健康结构体指针的存储位置 (entity_base_addr + 0x168) = 0x%lx\n", health_struct_ptr_location);
+                    uintptr_t health_struct_ptr_value = fetch_remote_pointer(target_process_handle, health_struct_ptr_location);
+                    if (health_struct_ptr_value == 0) {
+                        fprintf(stderr, "中文注释: 错误 - 读取健康结构体指针值失败 (指针存储地址: 0x%lx)\n", health_struct_ptr_location);
+                    } else {
+                        printf("中文注释: 成功 - 读取到健康结构体指针值 health_struct_ptr_value = 0x%lx\n", health_struct_ptr_value);
+
+                        uintptr_t current_hp_addr = health_struct_ptr_value + 0x98;
+                        int current_hp = fetch_remote_integer(target_process_handle, current_hp_addr);
+
+                        uintptr_t max_hp_addr = health_struct_ptr_value + 0xA0;
+                        int max_hp = fetch_remote_integer(target_process_handle, max_hp_addr);
+
+                        printf("中文注释: 信息 - 实体 0 - 当前血量: %d, 最大血量: %d (当前HP地址=0x%lx, 最大HP地址=0x%lx)\n", current_hp, max_hp, current_hp_addr, max_hp_addr);
+                    }
+
+                    // 步骤 5: 读取实体坐标 (简化版，假设非加密路径，并且coord_s3_ptr_addr_zuobiao_base直接包含最终坐标指针)
+                    // DrawPlayer.hpp Path: bingxiang6 + 0x248 -> ptr1_val -> ptr1_val + 0x10 -> ptr2_val -> ptr2_val + 0x10 -> ptr3_addr (zuobiao_base)
+                    // Then, if ReadDword(ptr3_addr)!=0, final_coord_ptr = ReadValue(ptr3_addr). Then +0x0 for X, +0x8 for Y/Z.
+                    uintptr_t coord_s1_ptr_location = entity_base_addr + 0x248;
+                    printf("中文注释: 计算坐标指针链S1的存储位置 (entity_base_addr + 0x248) = 0x%lx\n", coord_s1_ptr_location);
+                    uintptr_t coord_s1_ptr_val = fetch_remote_pointer(target_process_handle, coord_s1_ptr_location);
+                    if (coord_s1_ptr_val == 0) {
+                        fprintf(stderr, "中文注释: 错误 - 读取坐标指针链 S1 值 (coord_s1_ptr_val) 失败 (指针存储地址: 0x%lx)\n", coord_s1_ptr_location);
+                    } else {
+                        printf("中文注释: 成功 - 读取 coord_s1_ptr_val = 0x%lx\n", coord_s1_ptr_val);
+                        uintptr_t coord_s2_ptr_location = coord_s1_ptr_val + 0x10;
+                        printf("中文注释: 计算坐标指针链S2的存储位置 (coord_s1_ptr_val + 0x10) = 0x%lx\n", coord_s2_ptr_location);
+                        uintptr_t coord_s2_ptr_val = fetch_remote_pointer(target_process_handle, coord_s2_ptr_location);
+                        if (coord_s2_ptr_val == 0) {
+                            fprintf(stderr, "中文注释: 错误 - 读取坐标指针链 S2 值 (coord_s2_ptr_val) 失败 (指针存储地址: 0x%lx)\n", coord_s2_ptr_location);
+                        } else {
+                            printf("中文注释: 成功 - 读取 coord_s2_ptr_val = 0x%lx\n", coord_s2_ptr_val);
+                            uintptr_t coord_s3_ptr_location_zuobiao_base = coord_s2_ptr_val + 0x10;
+                            printf("中文注释: 计算坐标指针链S3(zuobiao_base)的存储位置 (coord_s2_ptr_val + 0x10) = 0x%lx\n", coord_s3_ptr_location_zuobiao_base);
+
+                            // 简化: 直接读取最终坐标指针。实际 DrawPlayer.hpp 会先读一个值判断是否加密。
+                            // 我们假设 coord_s3_ptr_location_zuobiao_base 这个地址里存的就是最终坐标结构体的指针 (final_coord_ptr)
+                            uintptr_t final_coord_ptr = fetch_remote_pointer(target_process_handle, coord_s3_ptr_location_zuobiao_base);
+                            printf("中文注释: _假设非加密路径_ 读取最终坐标指针 final_coord_ptr (从 coord_s3_ptr_location_zuobiao_base 读取) = 0x%lx\n", final_coord_ptr);
+
+                            if (final_coord_ptr == 0) {
+                                fprintf(stderr, "中文注释: 错误 - 读取最终坐标指针 final_coord_ptr 失败 (指针存储地址: 0x%lx). 可能实际路径需要解密或不同.\n", coord_s3_ptr_location_zuobiao_base);
+                            } else {
+                                printf("中文注释: 成功 - 读取到 final_coord_ptr = 0x%lx\n", final_coord_ptr);
+                                uintptr_t x_addr = final_coord_ptr + 0x0;    // 最终坐标指针 + X偏移
+                                int coord_x = fetch_remote_integer(target_process_handle, x_addr);
+
+                                uintptr_t y_or_z_addr = final_coord_ptr + 0x8; // 最终坐标指针 + Y/Z偏移
+                                int coord_y_or_z = fetch_remote_integer(target_process_handle, y_or_z_addr);
+
+                                printf("中文注释: 信息 - 实体 0 - X坐标: %d, Y/Z坐标: %d (X地址=0x%lx, Y/Z地址=0x%lx)\n", coord_x, coord_y_or_z, x_addr, y_or_z_addr);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else { // This else corresponds to the "if (core_region_base != 0)" check at the start of this new block
+        fprintf(stderr, "中文注释: core_region_base (libGameCore.so 基址) 为0，跳过特定游戏数据读取测试。\n");
+    }
+    printf("--- 特定游戏数据读取测试结束 ---\n\n");
+    // --- 新增测试代码结束 ---
+
     core_data_offset = core_region_base + 0x392A930;
     printf("计算数据偏移 core_data_offset: 0x%lx (基址 + 0x392A930)\n", core_data_offset);
 

@@ -670,6 +670,18 @@ void ImGui_init() {
     SX = ImAgeHeadFile1(SXlogo, sizeof(SXlogo));
     int pdys = 读取();
     pid = getPID("com.tencent.tmgp.sgame");
+    if (pid > 0) {
+        if (driver != nullptr) { // Ensure driver object exists
+            driver->initialize_for_pid(pid);
+            // fprintf(stderr, "Driver initialized with PID: %d in ImGui_init\n", pid);
+        } else {
+            fprintf(stderr, "Error: Global driver object is null in ImGui_init! PID: %d\n", pid);
+        }
+    } else {
+        fprintf(stderr, "Error: Failed to get PID for com.tencent.tmgp.sgame in ImGui_init. PID: %d\n", pid);
+        // Decide if this is a fatal error for your application.
+        // For now, just logging. The driver will not be initialized with a target PID.
+    }
     yxpx = abs_ScreenX;
     yxpy = abs_ScreenY;
     // gotpid();
