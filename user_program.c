@@ -263,15 +263,19 @@ int main(int argc, char *argv[]) {
 
     struct sockaddr_nl src_addr;
 
-    if (argc < 2) { // PID is still required
-        fprintf(stderr, "用法: %s <TargetHandle>\n", argv[0]);
-        fprintf(stderr, "示例: %s 1234\n", argv[0]);
-        return EXIT_FAILURE;
-    }
+    // if (argc < 2) { // PID is still required
+    //     fprintf(stderr, "用法: %s <TargetHandle>\n", argv[0]);
+    //     fprintf(stderr, "示例: %s 1234\n", argv[0]);
+    //     return EXIT_FAILURE;
+    // }
 
-    target_process_handle = atoi(argv[1]);
+    // target_process_handle = atoi(argv[1]);
+    target_process_handle = 12345; // 中文注释: <<-- 重要：请在此修改为您要测试的目标游戏进程的PID -->>
+    printf("中文注释: 注意 - 正在使用代码中硬编码的目标进程PID: %d\n", target_process_handle);
+    printf("中文注释: 如果需要测试不同进程，请直接修改 user_program.c 文件中的 target_process_handle 值。\n");
+
     if (target_process_handle <= 0) {
-        fprintf(stderr, "错误: 无效的 TargetHandle: %s\n", argv[1]);
+        fprintf(stderr, "错误: 无效的 TargetHandle (硬编码或修改后仍然无效): %d\n", target_process_handle);
         return EXIT_FAILURE;
     }
 
