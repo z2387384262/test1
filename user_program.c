@@ -303,7 +303,9 @@ int main(int argc, char *argv[]) {
     // 2. 演示 API 调用
     printf("\n--- 开始远程数据查询操作 (目标句柄: %d) ---\n", target_process_handle);
 
-    core_region_base = query_target_base(target_process_handle, region_to_find);
+    // core_region_base = query_target_base(target_process_handle, region_to_find);
+    core_region_base = 0x75CD840000; // 中文注释: GG修改器获取的 libGameCore.so 有效基址 (临时硬编码用于测试)
+    printf("中文注释: 注意 - 使用硬编码的 libGameCore.so 基址: 0x%lx\n", core_region_base);
     if (core_region_base == 0) {
         fprintf(stderr, "关键错误: 未能获取区域 '%s' 的基地址，无法继续。\n", region_to_find);
         close(g_ipc_descriptor);
