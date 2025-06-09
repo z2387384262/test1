@@ -311,6 +311,33 @@ int main(int argc, char *argv[]) {
     }
     printf("获取到区域 '%s' 基地址: 0x%lx\n", region_to_find, core_region_base);
 
+    // --- 新增 直接读取您在GG修改器中找到的特定地址的值 ---
+    uintptr_t gg_address_to_read = 0x74EE4F49D0; // 您提供的地址
+    printf("\n--- 开始直接读取GG提供的特定地址 (0x%lx) ---\n", gg_address_to_read);
+
+    // 尝试1: 假设该地址是一个整数 (int, 通常4字节)
+    printf("中文注释: 尝试将地址 0x%lx 读取为整数 (int)...\n", gg_address_to_read);
+    int gg_int_value = fetch_remote_integer(target_process_handle, gg_address_to_read);
+    // execute_ipc_transaction (called within fetch_remote_integer) will print detailed errors if any.
+    printf("中文注释: 读取地址 0x%lx 作为整数的结果: %d (十进制), 0x%x (十六进制)\n", gg_address_to_read, gg_int_value, gg_int_value);
+    if (gg_int_value == 0 && gg_address_to_read != 0) {
+        // This is a general note, as fetch_remote_integer returns 0 on error OR if the actual value is 0.
+        // Detailed errors would have been printed by execute_ipc_transaction to stderr.
+        fprintf(stderr, "中文注释: 注意 - 若整数结果为0，请检查之前是否有通讯或内核错误信息。这可能是真实值为0，也可能是读取失败。\n");
+    }
+
+    // 尝试2: 假设该地址是一个指针大小的值 (uintptr_t, 通常8字节)
+    printf("中文注释: 尝试将地址 0x%lx 读取为指针大小的值 (uintptr_t)...\n", gg_address_to_read);
+    uintptr_t gg_ptr_value = fetch_remote_pointer(target_process_handle, gg_address_to_read);
+    // execute_ipc_transaction (called within fetch_remote_pointer) will print detailed errors if any.
+    printf("中文注释: 读取地址 0x%lx 作为指针大小值的结果: 0x%lx\n", gg_address_to_read, gg_ptr_value);
+    if (gg_ptr_value == 0 && gg_address_to_read != 0) {
+        // Similar note for pointer-sized value.
+        fprintf(stderr, "中文注释: 注意 - 若指针大小值结果为0，请检查之前是否有通讯或内核错误信息。这可能是真实值为0，也可能是读取失败。\n");
+    }
+    printf("--- GG特定地址读取结束 ---\n\n");
+    // --- GG直接地址读取测试结束 ---
+
     // --- 新增 读取第一个实体血量和坐标的测试代码 (基于 DrawPlayer.hpp 分析) ---
     printf("\n--- 开始读取特定游戏数据 (基于 DrawPlayer.hpp 分析的偏移) ---\n");
 
