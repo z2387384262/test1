@@ -43,10 +43,6 @@ static void transform_data_buffer(unsigned char *buffer_addr, size_t buffer_len)
 
 // 模块许可证声明
 MODULE_LICENSE("GPL");
-// 模块作者声明
-MODULE_AUTHOR("Obfuscated Author");
-// 模块描述
-MODULE_DESCRIPTION("通过特定通道进行远程数据查询的内核组件。");
 
 // 定义特定通道ID (例如 CTL_CHANNEL_ID 29) - 值已更改
 #define CTL_CHANNEL_ID 29 // 原 NETLINK_MY_PROTOCOL, 值从31更改为29
@@ -55,6 +51,8 @@ MODULE_DESCRIPTION("通过特定通道进行远程数据查询的内核组件。
 #define REQ_TYPE_FETCH_PTR 2    // 读取指针大小数据请求 (原 MSG_TYPE_READ_UINTPTR)
 #define REQ_TYPE_FETCH_INT 3        // 读取整型数据请求 (原 MSG_TYPE_READ_INT)
 #define RESP_TYPE_ERROR_STATUS 4           // 错误消息类型 (原 MSG_TYPE_ERROR)
+#define REQ_TYPE_WRITE_INT 5        // 写入整型数据请求
+#define REQ_TYPE_WRITE_PTR 6        // 写入指针大小数据请求
 
 // 上行消息结构体 (用户空间到内核空间)
 typedef struct {
@@ -63,6 +61,7 @@ typedef struct {
     unsigned long data_offset; // 读取操作的目标地址 (原 address)
     char object_label[128]; // 区域标签 (用于获取模块基地址, 原 name)
     unsigned char auth_key_data[16]; // New field for the token (size matches secret)
+    unsigned long value_to_write; // 用于写入操作的值
 } ipc_msg_upstream_t; // 原 nl_request_t
 
 // 下行消息结构体 (内核空间到用户空间)
@@ -109,17 +108,35 @@ static int retrieve_integer_value(pid_t target_id, unsigned long data_offset, in
 static unsigned long find_target_region_start(pid_t target_id, const char* object_label) {
     struct task_struct *target_process_info;    // 原 task
     struct mm_struct *process_mem_context;      // 原 mm
-    struct vm_area_struct *mem_region_descriptor; // 原 vma // Note: This function still uses VMA iteration. access_process_vm is for acquire_remote_data_segment.
+    struct vm_area_struct *mem_region_descriptor; // 原 vma
     unsigned long base_address = 0;
     char *path_buf = NULL;
     const int path_buf_len = 256; // 路径缓冲区的长度
+    char *actual_module_name = NULL;
+    char *bss_suffix_ptr;
+    int find_bss = 0;
+    unsigned long last_file_vma_end = 0;
 
     printk(KERN_INFO "find_target_region_start: TargetID=%d, ObjectLabel=%s\n", target_id, object_label);
+
+    actual_module_name = kstrdup(object_label, GFP_KERNEL);
+    if (!actual_module_name) {
+        printk(KERN_ERR "find_target_region_start: Failed to kstrdup object_label\n");
+        return 0;
+    }
+
+    bss_suffix_ptr = strnstr(actual_module_name, ":bss", strlen(actual_module_name));
+    if (bss_suffix_ptr) {
+        printk(KERN_INFO "find_target_region_start: BSS segment requested for %s\n", actual_module_name);
+        find_bss = 1;
+        *bss_suffix_ptr = '\0'; // Null-terminate the module name before ":bss"
+    }
 
     // 为路径缓冲区分配内存
     path_buf = kmalloc(path_buf_len, GFP_KERNEL);
     if (!path_buf) {
         printk(KERN_ERR "find_target_region_start: Failed to allocate path_buf\n");
+        kfree(actual_module_name);
         return 0;
     }
 
@@ -134,6 +151,7 @@ static unsigned long find_target_region_start(pid_t target_id, const char* objec
     if (!target_process_info) {
         printk(KERN_WARNING "find_target_region_start: Process info for TargetID %d not found.\n", target_id);
         kfree(path_buf);
+        kfree(actual_module_name);
         return 0;
     }
 
@@ -144,6 +162,7 @@ static unsigned long find_target_region_start(pid_t target_id, const char* objec
     if (!process_mem_context) {
         printk(KERN_WARNING "find_target_region_start: Could not get memory context for TargetID %d.\n", target_id);
         kfree(path_buf);
+        kfree(actual_module_name);
         return 0;
     }
 
@@ -152,43 +171,95 @@ static unsigned long find_target_region_start(pid_t target_id, const char* objec
         printk(KERN_WARNING "find_target_region_start: Failed to acquire mmap_read_lock for TargetID %d\n", target_id);
         mmput(process_mem_context); // mm_struct引用计数减1
         kfree(path_buf);
+        kfree(actual_module_name);
         return 0;
     }
 
-    for (mem_region_descriptor = process_mem_context->mmap; mem_region_descriptor; mem_region_descriptor = mem_region_descriptor->vm_next) {
-        if (mem_region_descriptor->vm_file) {
-            char *actual_path;
-            char *basename;
+    if (find_bss) {
+        // First pass: Find the end of the last file-backed VMA for the module
+        for (mem_region_descriptor = process_mem_context->mmap; mem_region_descriptor; mem_region_descriptor = mem_region_descriptor->vm_next) {
+            if (mem_region_descriptor->vm_file) {
+                char *actual_path;
+                char *basename;
 
-            memset(path_buf, 0, path_buf_len);
-            actual_path = d_path(&mem_region_descriptor->vm_file->f_path, path_buf, path_buf_len);
+                memset(path_buf, 0, path_buf_len);
+                actual_path = d_path(&mem_region_descriptor->vm_file->f_path, path_buf, path_buf_len);
 
-            if (IS_ERR(actual_path)) {
-                // printk(KERN_WARNING "find_target_region_start: Error getting path for mem_region_descriptor, error %ld\n", PTR_ERR(actual_path));
-                continue; // 路径获取错误，跳过此VMA
+                if (IS_ERR(actual_path)) {
+                    continue; 
+                }
+                basename = strrchr(actual_path, '/');
+                if (basename) basename++; else basename = actual_path;
+
+                if (strcmp(basename, actual_module_name) == 0) {
+                    if (mem_region_descriptor->vm_end > last_file_vma_end) {
+                        last_file_vma_end = mem_region_descriptor->vm_end;
+                    }
+                }
             }
+        }
+        printk(KERN_INFO "find_target_region_start: Last file VMA for %s ends at 0x%lx\n", actual_module_name, last_file_vma_end);
 
-            // 获取文件名 (basename)
-            basename = strrchr(actual_path, '/');
-            if (basename) {
-                basename++; // 跳过 '/'
-            } else {
-                basename = actual_path; // 如果没有 '/', 则整个路径是文件名
+        if (last_file_vma_end == 0) {
+            printk(KERN_WARNING "find_target_region_start: Could not find file-backed VMAs for %s to locate BSS.\n", actual_module_name);
+            mmap_read_unlock(process_mem_context);
+            mmput(process_mem_context);
+            kfree(path_buf);
+            kfree(actual_module_name);
+            return 0;
+        }
+
+        // Second pass: Find the anonymous VMA immediately following the last_file_vma_end
+        for (mem_region_descriptor = process_mem_context->mmap; mem_region_descriptor; mem_region_descriptor = mem_region_descriptor->vm_next) {
+            // Check if it's an anonymous VMA
+            if (mem_region_descriptor->vm_file == NULL) {
+                // Check if it starts exactly where the last file VMA ended
+                if (mem_region_descriptor->vm_start == last_file_vma_end) {
+                    // Check for rw-p permissions
+                    if ((mem_region_descriptor->vm_flags & VM_READ) &&
+                        (mem_region_descriptor->vm_flags & VM_WRITE) &&
+                        !(mem_region_descriptor->vm_flags & VM_EXEC)) {
+                        base_address = mem_region_descriptor->vm_start;
+                        printk(KERN_INFO "find_target_region_start: Found BSS segment for %s at 0x%lx (flags:0x%lx)\n", actual_module_name, base_address, mem_region_descriptor->vm_flags);
+                        goto found_or_failed; // Exit loop once BSS is found
+                    }
+                }
             }
+        }
+        // If BSS was requested but not found after iterating all VMAs
+        if (base_address == 0) {
+             printk(KERN_WARNING "find_target_region_start: BSS segment for %s not found after last file VMA at 0x%lx\n", actual_module_name, last_file_vma_end);
+        }
 
-            // printk(KERN_DEBUG "find_target_region_start: Checking VMA: %s (0x%lx-0x%lx)\n", basename, mem_region_descriptor->vm_start, mem_region_descriptor->vm_end);
+    } else { // Original logic: find by module name
+        for (mem_region_descriptor = process_mem_context->mmap; mem_region_descriptor; mem_region_descriptor = mem_region_descriptor->vm_next) {
+            if (mem_region_descriptor->vm_file) {
+                char *actual_path;
+                char *basename;
 
-            if (strcmp(basename, object_label) == 0) {
-                base_address = mem_region_descriptor->vm_start;
-                printk(KERN_INFO "find_target_region_start: Found object %s at 0x%lx for TargetID %d\n", object_label, base_address, target_id);
-                break; // 找到模块，跳出循环
+                memset(path_buf, 0, path_buf_len);
+                actual_path = d_path(&mem_region_descriptor->vm_file->f_path, path_buf, path_buf_len);
+
+                if (IS_ERR(actual_path)) {
+                    continue; 
+                }
+                basename = strrchr(actual_path, '/');
+                if (basename) basename++; else basename = actual_path;
+                
+                if (strcmp(basename, actual_module_name) == 0) {
+                    base_address = mem_region_descriptor->vm_start;
+                    printk(KERN_INFO "find_target_region_start: Found object %s at 0x%lx for TargetID %d\n", actual_module_name, base_address, target_id);
+                    goto found_or_failed; // Exit loop
+                }
             }
         }
     }
 
+found_or_failed:
     mmap_read_unlock(process_mem_context); // 释放读锁
     mmput(process_mem_context);            // mm_struct引用计数减1
     kfree(path_buf);      // 释放路径缓冲区
+    kfree(actual_module_name); // 释放复制的模块名
 
     return base_address;
 }
