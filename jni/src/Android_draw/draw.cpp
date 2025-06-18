@@ -669,6 +669,7 @@ void ImGui_init() {
     ZY = ImAgeHeadFile1(ZYlogo, sizeof(ZYlogo));
     SX = ImAgeHeadFile1(SXlogo, sizeof(SXlogo));
     int pdys = 读取();
+    pid_t pid = -1;
     pid = getPID("com.tencent.tmgp.sgame");
     if (pid > 0) {
         if (driver != nullptr) { // Ensure driver object exists
