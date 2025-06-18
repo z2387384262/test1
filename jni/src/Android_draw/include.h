@@ -1,5 +1,4 @@
 //#include "wanbai.hpp"
-#include "kernel.h"
 #include <imgui.h>
 #include <stb_image.h>
 uintptr_t libbase;
@@ -252,8 +251,6 @@ float 当前血量;
 long int 兵线数组地址;
 
 char DrawPlayerCount[100];
-Vector3 D;
-Vector3 Z;
 float AimX,AimY;
 long int zmx,zmy,zmx1,zmy1;
 int Health;
