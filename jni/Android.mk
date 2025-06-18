@@ -14,11 +14,21 @@ LOCAL_C_INCLUDES +=$(LOCAL_PATH)/include/ImGui
 LOCAL_C_INCLUDES +=$(LOCAL_PATH)/include/native_surface
 LOCAL_C_INCLUDES +=$(LOCAL_PATH)/include/native_surface/aosp
 
-FILE_LIST += $(wildcard $(LOCAL_PATH)/src/*.c*)
-FILE_LIST += $(wildcard $(LOCAL_PATH)/src/Android_draw/*.c*)
-FILE_LIST += $(wildcard $(LOCAL_PATH)/src/Android_touch/*.c*)
-FILE_LIST += $(wildcard $(LOCAL_PATH)/src/ImGui/*.c*)
-LOCAL_SRC_FILES += $(FILE_LIST:$(LOCAL_PATH)/%=%)
+LOCAL_SRC_FILES :=     src/main.cpp     src/kernel_netlink_interface.cpp     src/Android_draw/c_driver.cpp     src/Android_draw/draw.cpp     src/res/cJSON.c
+
+# Add ImGui files using wildcard (assuming they are all .cpp files)
+# If there are .c files, they need to be added separately or the pattern adjusted
+FILE_LIST_IMGUI := $(wildcard $(LOCAL_PATH)/src/ImGui/*.cpp)
+LOCAL_SRC_FILES += $(FILE_LIST_IMGUI:$(LOCAL_PATH)/%=%)
+
+# Add Android_touch files using wildcard
+FILE_LIST_TOUCH := $(wildcard $(LOCAL_PATH)/src/Android_touch/*.cpp)
+LOCAL_SRC_FILES += $(FILE_LIST_TOUCH:$(LOCAL_PATH)/%=%)
+
+# If stb_image.c is used by ImGui and is a .c file, it needs to be added.
+# Check if src/ImGui/stb_image.cpp exists, if so the above is fine.
+# If it's src/ImGui/stb_image.c, it won't be picked up by *.cpp
+# From previous ls, it's src/ImGui/stb_image.cpp, so the wildcard *.cpp for ImGui is fine.
 
 LOCAL_LDFLAGS += -lEGL -lGLESv2 -lGLESv3 -landroid -llog
 include $(BUILD_EXECUTABLE)
