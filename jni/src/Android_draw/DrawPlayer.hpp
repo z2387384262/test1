@@ -352,10 +352,10 @@ zuobiao = ReadValue(ReadValue(ReadValue(libGame_base + 0x3B91020) + 0x28) + 0x25
 unsigned long start = zuobiao & (~(PAGE_SIZE - 1)) - PAGE_SIZE;
 for (int i = 0; i < 4096; i++) {
 long p = start + 0x4 * i;
-if (driver->read<int>(p) == 256) {
-int j = driver->read<int>(p - 0x8);
+if (driver->read_typed<int>(p) == 256) {
+int j = driver->read_typed<int>(p - 0x8);
 if (j == 0 || j == 200) {
-int zuoX = driver->read<int>(p - 0xC);
+int zuoX = driver->read_typed<int>(p - 0xC);
 if (linearSearch(zuo, 5, zuoX) == 0) {
 	zuo[a] = p - 0xC;
 	printf("ID[%d] = %p\n", a, zuo[a]);
@@ -881,11 +881,11 @@ long temp = ReadValue(lil2cpp_base +  0x43F600); // 8F547A8
     long bingxiang1 = temp1 + 0x120;
     /*
       int
-      自身ID=driver->read<int>(ReadValue(ReadValue(ReadValue(ReadValue(lil2cpp_base+0x8c470D8)
+      自身ID=driver->read_typed<int>(ReadValue(ReadValue(ReadValue(ReadValue(lil2cpp_base+0x8c470D8)
       +0xA0)+0x40)+0x50)+0x138);
 
       int
-      测试ID=driver->read<int>(ReadValue(ReadValue(ReadValue(ReadValue(lil2cpp_base+0x264B0)
+      测试ID=driver->read_typed<int>(ReadValue(ReadValue(ReadValue(ReadValue(lil2cpp_base+0x264B0)
       +0xA0)+0x40)+0x170)+0x138);//libil2cpp.so:bss[1] + 0x264B0 -> + 0xA0 -> +
       0x40 -> + 0x170 -> + 0x138
 
@@ -915,20 +915,20 @@ if (十人) {
       int pand = 1;
 
       if (pand > 0) {
-        int zhengxing = driver->read<int>(bingxiang6 + 0x3C);
+        int zhengxing = driver->read_typed<int>(bingxiang6 + 0x3C);
 
         dataTable.heroTemp[i].Skill =
-            driver->read<int>(
+            driver->read_typed<int>(
                 ReadValue(ReadValue(ReadValue(bingxiang6 + 0x150) + 0x150) +
                           0xf8) +
                 0x3c) /
             8192000;
 
-        dataTable.heroTemp[i].TB = driver->read<int>(
+        dataTable.heroTemp[i].TB = driver->read_typed<int>(
             ReadValue(ReadValue(ReadValue(bingxiang6 + 0x150) + 0x150) + 0xC8) +
             0x10);
             
-        /*dataTable.heroTemp[i].TB = driver->read<int>(
+        /*dataTable.heroTemp[i].TB = driver->read_typed<int>(
             ReadValue(ReadValue(ReadValue(bingxiang6 + 0x148) + 0x150) + 0x110) +
             0x500);*/
 
@@ -950,8 +950,8 @@ if (十人) {
         map_coord.Y = map_coord.Y + SmallHPY;
 
         if (zhengxing != foeComp) {
-          float 坐标x = (float)driver->read<int>(ReadValue(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x248) + 0x10)) +0x10) + 0x0); // 坐标输出的坐
-          float 坐标y = (float)driver->read<int>(ReadValue(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x248) + 0x10)) +0x10) + 0x8); // 坐标输出的坐
+          float 坐标x = (float)driver->read_typed<int>(ReadValue(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x248) + 0x10)) +0x10) + 0x0); // 坐标输出的坐
+          float 坐标y = (float)driver->read_typed<int>(ReadValue(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x248) + 0x10)) +0x10) + 0x8); // 坐标输出的坐
           
           坐标X = (int)坐标x;
 
@@ -979,7 +979,7 @@ if (十人) {
             }
             //控制状态 = ReadDword(bingxiang6 - 0xB4);
             //沉默1 眩晕2 //击飞3 //冰冻4  正常0
-            控制状态=driver->read<int>(driver->read<uint64_t>(driver->read<uint64_t>(driver->read<uint64_t>(driver->read<uint64_t>(driver->read<uint64_t>(libGame_base + 0x2540)+ 0x48) + 0xD8) + 0x108) + 0x110) +0x258);
+            控制状态=driver->read_typed<int>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(libGame_base + 0x2540)+ 0x48) + 0xD8) + 0x108) + 0x110) +0x258);
             
             if (dataTable.heroTemp[i].TB == 80108 ||
                 dataTable.heroTemp[i].TB == 80104 ||
@@ -1005,30 +1005,30 @@ if (十人) {
         if (zhengxing == foeComp) {
           // //////头像id↓代码
 dataTable.heroTemp[i].Hp =
-            driver->read<int>(ReadValue(bingxiang6 + 0x168) + 0x98); // 当前血量
+            driver->read_typed<int>(ReadValue(bingxiang6 + 0x168) + 0x98); // 当前血量
 
         dataTable.heroTemp[i].MaxHp =
-            driver->read<int>(ReadValue(bingxiang6 + 0x168) + 0xa0);
+            driver->read_typed<int>(ReadValue(bingxiang6 + 0x168) + 0xa0);
             
-        dataTable.heroTemp[i].HC = driver->read<int>(
+        dataTable.heroTemp[i].HC = driver->read_typed<int>(
             ReadValue(ReadValue(ReadValue(bingxiang6 + 0x150) + 0x168) +
                       0x168) +
             0x20);
-         long 蓝方敌人视野判断 =  driver->read<int>(ReadValue(ReadValue(bingxiang6 + 0x260)+0x68)+0x38);
-          long 红方敌人视野判断 =  driver->read<int>(ReadValue(ReadValue(bingxiang6 + 0x260)+0x68)+0x18);
+         long 蓝方敌人视野判断 =  driver->read_typed<int>(ReadValue(ReadValue(bingxiang6 + 0x260)+0x68)+0x38);
+          long 红方敌人视野判断 =  driver->read_typed<int>(ReadValue(ReadValue(bingxiang6 + 0x260)+0x68)+0x18);
           if (zhengxing == 2) {
-            视野 = driver->read<int>(
+            视野 = driver->read_typed<int>(
                 ReadValue(ReadValue(bingxiang6 + 0x260) + 0x68) + 0x18);
-            自身视野 = driver->read<int>(
-                driver->read<uint64_t>(
-                    driver->read<uint64_t>(bingxiang8 + 0x260) + 0x68) +
+            自身视野 = driver->read_typed<int>(
+                driver->read_typed<uint64_t>(
+                    driver->read_typed<uint64_t>(bingxiang8 + 0x260) + 0x68) +
                 0x38);
           } else {
-            视野 = driver->read<int>(
+            视野 = driver->read_typed<int>(
                 ReadValue(ReadValue(bingxiang6 + 0x260) + 0x68) + 0x38);
-            自身视野 = driver->read<int>(
-                driver->read<uint64_t>(
-                    driver->read<uint64_t>(bingxiang8 + 0x260) + 0x68) +
+            自身视野 = driver->read_typed<int>(
+                driver->read_typed<uint64_t>(
+                    driver->read_typed<uint64_t>(bingxiang8 + 0x260) + 0x68) +
                 0x18);
           }
           if (自身) {
@@ -1060,11 +1060,11 @@ dataTable.heroTemp[i].Hp =
 		              
 
         //unsigned long 人物坐标 = driver->ValueLmultiple(StructureHeader + 0x2B8, {0x80, 0x20, 0x48});
-        /*if (driver->read<bool>(zuobiao+ 0x7) == 0) {
+        /*if (driver->read_typed<bool>(zuobiao+ 0x7) == 0) {
     	    unsigned long start = zuobiao & (~(PAGE_SIZE - 1)) + PAGE_SIZE;
          	int offest = 0;
           	for (int i = 0; i < 1024; i++) {
-         		if (driver->read<int>(start + 0x4 * i)) {
+			if (driver->read_typed<int>(start + 0x4 * i)) {
          			offest = 0x4 * i + PAGE_SIZE;
           			break;
          		}
@@ -1075,7 +1075,7 @@ dataTable.heroTemp[i].Hp =
             //人物坐标加上偏移得到真实人物坐标
          	for (int v = 0; v < 4; v++) {
          		
-         		if (driver->read<bool>(zuobiao+ 0xD + v) == 1) {
+			if (driver->read_typed<bool>(zuobiao+ 0xD + v) == 1) {
          			ImGui::GetForegroundDrawList()->AddText(ImVec2(0.0375 * yxpx, 0.925925925925925925 * yxpy), Paint_red, "坐标已加密");=
           			zuobiao= zuobiao+ v;
                   	//人物坐标加上偏移    		    		
@@ -1134,8 +1134,8 @@ dataTable.heroTemp[i].Hp =
             prevPosX[i] = (float)dataTable.heroTemp[i].coord.X;
             prevPosY[i] = (float)dataTable.heroTemp[i].coord.Y;
             
-          	float 坐标x = (float)driver->read<int>(zuobiao + 0x0);
-            float 坐标y = (float)driver->read<int>(zuobiao + 0x8);
+		float 坐标x = (float)driver->read_typed<int>(zuobiao + 0x0);
+            float 坐标y = (float)driver->read_typed<int>(zuobiao + 0x8);
             if (坐标x && 坐标y) {
               float currentPosX = (float)坐标x;
               float currentPosY = (float)坐标y;
@@ -1864,7 +1864,7 @@ ImGui::GetForegroundDrawList()->AddImage(
 }
 			/*dataTable.heroTemp[i].Spaceid = dataTable.heroTemp[i].Id*100+30;
             dataTable.heroTemp[i].Space =
-                driver->read<int>(
+                driver->read_typed<int>(
                     ReadValue(ReadValue(ReadValue(bingxiang6 + 0x148) + 0x108) +
                               0xa8) +
                     0x3C) /
@@ -1880,12 +1880,12 @@ ImGui::GetForegroundDrawList()->AddImage(
             dataTable.heroTemp[i].Spaceid =dataTable.heroTemp[i].Id*100+30;
 
             // dataTable.heroTemp[i].Skill =
-            // driver->read<int>(ReadValue(ReadValue(ReadValue(bingxiang6+0x148)+0x150)+0xa8)+0x3c)/8192000;
+            // driver->read_typed<int>(ReadValue(ReadValue(ReadValue(bingxiang6+0x148)+0x150)+0xa8)+0x3c)/8192000;
             当前血量 = (float)dataTable.heroTemp[i].Hp /
                        (float)dataTable.heroTemp[i].MaxHp;
 
             // dataTable.heroTemp[i].TB =
-            // driver->read<int>(ReadValue(ReadValue(ReadValue(bingxiang6+0x148)
+            // driver->read_typed<int>(ReadValue(ReadValue(ReadValue(bingxiang6+0x148)
             // + 0x150) + 0x60) + 0x10);
 
             if (dataTable.heroTemp[i].TB != 80102 &&
@@ -2384,7 +2384,7 @@ if (自动净化) {
         dataTable.pve[i].maxhp =
             ReadValue(实体指针 + 0x168) + 0xA0;
             
-int 惩戒 = driver->read<int>(driver->read<uint64_t>(driver->read<uint64_t>(driver->read<uint64_t>(driver->read<uint64_t>(driver->read<uint64_t>(lil2cpp_base+0x55EEA8)+0xB8)+0x0)+0x20)+0x28)+0x1F8);
+int 惩戒 = driver->read_typed<int>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(driver->read_typed<uint64_t>(lil2cpp_base+0x55EEA8)+0xB8)+0x0)+0x20)+0x28)+0x1F8);
              if (召唤师ID == 183) {
             惩戒伤害 = 惩戒 * 1.25;
             } else {
