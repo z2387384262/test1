@@ -58,6 +58,7 @@ pid_t getPID(const char* PackageName);
 uintptr_t ReadValue(uintptr_t addr);
 int32_t ReadInt32(uintptr_t addr);
 float ReadFloat(uintptr_t addr);
+uint32_t ReadDword(uintptr_t addr);
 bool WriteInt32(uintptr_t addr, int32_t value);
 bool WriteFloat(uintptr_t addr, float value);
 uintptr_t getModuleBase(const char* module_name);

@@ -1118,12 +1118,12 @@ dataTable.heroTemp[i].Hp =
               dataTable.heroTemp[i].coord.X = (float)坐标x;
               dataTable.heroTemp[i].coord.Y = (float)坐标y;
             } else {
-            	dataTable.heroTemp[i].coord.X = (float)driver->read<int>(zuobiao + 0x0);
-              	dataTable.heroTemp[i].coord.Y = (float)driver->read<int>(zuobiao + 0x8);
+		dataTable.heroTemp[i].coord.X = (float)driver->read_typed<int>(zuobiao + 0x0);
+		dataTable.heroTemp[i].coord.Y = (float)driver->read_typed<int>(zuobiao + 0x8);
             }
           } else {
-            float 坐标x = (float)driver->read<int>(zuobiao + 0x0);
-            float 坐标y = (float)driver->read<int>(zuobiao + 0x8);
+            float 坐标x = (float)driver->read_typed<int>(zuobiao + 0x0);
+            float 坐标y = (float)driver->read_typed<int>(zuobiao + 0x8);
             if (坐标x && 坐标y) {
               dataTable.heroTemp[i].coord.X = (float)坐标x;
               dataTable.heroTemp[i].coord.Y = (float)坐标y;
@@ -1222,15 +1222,15 @@ dataTable.heroTemp[i].Hp =
 
 
 
-              int 大招最大CD = driver->read<int>(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x150) + 0x108) + 0xf8) + 0x3C) / 8192000;
-        int Space3= driver->read<int>(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x150) + 0x108) + 0xf8) + 0x3C) / 8192000;
+              int 大招最大CD = driver->read_typed<int>(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x150) + 0x108) + 0xf8) + 0x3C) / 8192000;
+        int Space3= driver->read_typed<int>(ReadValue(ReadValue(ReadValue(bingxiang6 + 0x150) + 0x108) + 0xf8) + 0x3C) / 8192000;
           
     dataTable.heroTemp[i].TB4 = ReadValue(ReadValue(ReadValue
     (bingxiang6 + 0x150) + 0x150) + 0xe0) + 0x10;//召唤师技能
           if (ESPMenu.是否开启共享&&aa!=0) {
           
             //启用共享绘制传输变量
-          int  zyz = driver->read<int>(bingxiang6 + 0x3C);  //阵营           
+          int  zyz = driver->read_typed<int>(bingxiang6 + 0x3C);  //阵营
           int  herealx = (int)(dataTable.heroTemp[i].coord.X * rientation * 2400/2/11.2f*1.455 / 50000 + 2400/2/11.2f*1.455);
          int   herealy = (int)(dataTable.heroTemp[i].coord.Y * rientation * 2400/2/11.2f*1.455 / 50000 * -1 + 2400/2/11.2f*1.455);
 
@@ -2349,10 +2349,10 @@ if (自动净化) {
                   if (ESPMenu.是否开启共享) {
                     //共享全源数据
        // bbuff1 = Driver->读取指针(野怪数组 + i * 0x18);
-        buffid = driver->read<int>(dataTable.pve[i].id);
-        ygtime = driver->read<int>(dataTable.pve[i].cd ) / 1000;
-        xxx1 = driver->read<int>(dataTable.pve[i].X);
-        yyy1 = driver->read<int>(dataTable.pve[i].Y);
+        buffid = driver->read_typed<int>(dataTable.pve[i].id);
+        ygtime = driver->read_typed<int>(dataTable.pve[i].cd ) / 1000;
+        xxx1 = driver->read_typed<int>(dataTable.pve[i].X);
+        yyy1 = driver->read_typed<int>(dataTable.pve[i].Y);
         buffx = xxx1 * rientation * 2400/2/11.2f*1.455 / 50000.0f + 2400/2/11.2f*1.455;
         buffy = yyy1 * rientation * 2400/2/11.2f*1.455 / 50000.0f * -1 + 2400/2/11.2f*1.455;
         //传输野怪数据
@@ -2393,17 +2393,17 @@ int 惩戒 = driver->read_typed<int>(driver->read_typed<uint64_t>(driver->read_t
             //旧(上帝so+0xB6B820)+0xB8)+0x50)+0x20)+0x20)+0x1E0);
 //libil2cpp.so:bss + 0xDD68 -> 0xB8 -> 0x2B0 -> 0x260 -> 0x20 -> 0x1E0
 //新libil2cpp.so:bss[1] + 0x4E8980 -> + 0xB8 -> + 0x10 -> + 0x20 -> + 0x20 -> + 0x1E0
-        dataTable.pveTemp[i].cd = driver->read<int>(dataTable.pve[i].cd) / 1000;
+        dataTable.pveTemp[i].cd = driver->read_typed<int>(dataTable.pve[i].cd) / 1000;
         dataTable.pveTemp[i].maxcd =
-            driver->read<int>(dataTable.pve[i].maxcd) / 1000;
-        dataTable.pveTemp[i].id = driver->read<int>(dataTable.pve[i].id);
+            driver->read_typed<int>(dataTable.pve[i].maxcd) / 1000;
+        dataTable.pveTemp[i].id = driver->read_typed<int>(dataTable.pve[i].id);
         if(dataTable.pveTemp[i].id == 0){continue;}
         int 固定坐标X = ReadDword(dataTable.pve[i].cc + 0x2b8);
         int 固定坐标Y = ReadDword(dataTable.pve[i].cc + 0x2C0);
         float pveX =
-            (float)driver->read<int>(dataTable.pve[i].X);
+            (float)driver->read_typed<int>(dataTable.pve[i].X);
         float pveY =
-            (float)driver->read<int>(dataTable.pve[i].Y);
+            (float)driver->read_typed<int>(dataTable.pve[i].Y);
             
             float 野怪跨度X = pveX - pvePosX[i];
 			  if (野怪跨度X < 0) {
@@ -2428,8 +2428,8 @@ int 惩戒 = driver->read_typed<int>(driver->read_typed<uint64_t>(driver->read_t
             
             //int 野怪距敌 = 计算距离(ImVec2(dataTable.pveTemp[i].coord.X,
                             //dataTable.pveTemp[i].coord.Y), 目标坐标);
-            dataTable.pveTemp[i].hp = driver->read<int>(dataTable.pve[i].hp);
-            dataTable.pveTemp[i].maxhp = driver->read<int>(dataTable.pve[i].maxhp);
+            dataTable.pveTemp[i].hp = driver->read_typed<int>(dataTable.pve[i].hp);
+            dataTable.pveTemp[i].maxhp = driver->read_typed<int>(dataTable.pve[i].maxhp);
             //printf("hp %d  maxhp %d\n", dataTable.pveTemp[i].hp, dataTable.pveTemp[i].maxhp);
         map_buff = CalMatrixMem(dataTable.pveTemp[i].coord, dataTable.Matrix);
         map_buff.X = map_buff.X + SmallHPX;
@@ -2639,15 +2639,15 @@ if (兵线) {
       long cont = 0;
       for (int l = 0; l < number; l++) {
         bxAddress = ReadValue(BxAddress + (l * 0x18));
-        int temp = driver->read<int>(bxAddress + 0x3c);
+        int temp = driver->read_typed<int>(bxAddress + 0x3c);
         if (temp == foeComp) {
       
-          int bxxl = driver->read<int>(ReadValue(bxAddress + 0x168) + 0x98);
+          int bxxl = driver->read_typed<int>(ReadValue(bxAddress + 0x168) + 0x98);
 
-          dataTable.CeTemp[cont].coord.X = (float)driver->read<int>(
+          dataTable.CeTemp[cont].coord.X = (float)driver->read_typed<int>(
               ReadValue(ReadValue(ReadValue(bxAddress + 0x230) + 0xf0) + 0x10) +
               0x0);
-          dataTable.CeTemp[cont].coord.Y = (float)driver->read<int>(
+          dataTable.CeTemp[cont].coord.Y = (float)driver->read_typed<int>(
               ReadValue(ReadValue(ReadValue(bxAddress + 0x230) + 0xf0) + 0x10) +
               0x8);
           if (dataTable.CeTemp[cont].coord.X == 0 ||

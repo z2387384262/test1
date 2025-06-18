@@ -1572,7 +1572,7 @@ void 绘制技能(TextureInfo textureInfo,int x,int y,int 大招CD,int 技能CD,
 
 void 绘制血条(float leftx,float lefty,int hp)
 {
-	float TXdx = 0.020834f*(py*2);
+	float TXdx = 0.020834f*(yxpy*2);
 	float cc = TXdx*1.10f;
 	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(leftx-cc,lefty+TXdx),ImVec2(leftx-cc+hp*cc/50-0.5f,lefty+TXdx+7),ImColor{0/255.f,255/255.f,0/255.f,255/255.f},2,ImDrawFlags_RoundCornersAll);
 }
