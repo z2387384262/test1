@@ -14,7 +14,6 @@
 #include <fstream>
 #include "res/weiyan.h"
 #include "res/cJSON.h"
-#include "res/cJSON.c"
 #include "res/Encrypt.h"
 #include<iostream>
 #include<ctime>
